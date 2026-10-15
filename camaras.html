@@ -56,7 +56,7 @@ main{max-width:1200px;margin:0 auto;padding:16px}
 /* reproductor */
 .reproductor{background:var(--panel);border:1px solid var(--linea);border-radius:14px;overflow:hidden}
 .pantalla{position:relative;aspect-ratio:16/9;background:#000;display:grid;place-items:center}
-.pantalla iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.pantalla iframe,.pantalla video{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000}
 .pantalla .vacio{color:#C9D3DC;text-align:center;padding:24px;max-width:46ch}
 .info{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px}
 .info .titulo{font-weight:700;margin-right:auto}
@@ -194,7 +194,7 @@ function iniciarGoogle(){
   });
 }
 $("entrar").onclick = () => {
-  if (token){ google.accounts.oauth2.revoke(token,()=>{}); token=null; sessionStorage.removeItem("tk");
+  if (token){ /* NO revocar: anularía también el acceso de rclone (mismo proyecto de Google) */ token=null; sessionStorage.removeItem("tk");
     $("entrar").textContent="Entrar con Google"; videos=[]; dibujar(); estado("Sesión cerrada."); return; }
   if (CLIENT_ID.startsWith("PEGAR")){ estado("Falta configurar el CLIENT_ID en el archivo. Mientras tanto se muestra un ejemplo.", true); demo(); return; }
   tokenClient?.requestAccessToken({prompt:""});
@@ -308,8 +308,21 @@ function dibujar(){
 function reproducir(i){
   const v=videos[i]; if (!v) return; actual=i;
   const p=$("pantalla");
-  p.innerHTML = v.demo ? `<p class="vacio">Ejemplo: acá se vería el video de ${nombreCam(v.cam)} de las ${hhmm(v.ini)}.</p>`
-                       : `<iframe src="https://drive.google.com/file/d/${v.id}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
+  if (v.demo) {
+    p.innerHTML = `<p class="vacio">Ejemplo: acá se vería el video de ${nombreCam(v.cam)} de las ${hhmm(v.ini)}.</p>`;
+  } else if (swListo && token) {
+    p.innerHTML = `<video controls autoplay playsinline preload="metadata" title="Video"></video>`;
+    const vid = p.querySelector("video");
+    vid.src = `video/${v.id}?t=${encodeURIComponent(token)}`;
+    vid.onended = () => mismaCam(actual, 1) && reproducir(actual + 1);   // sigue con el próximo tramo
+    vid.onerror = () => {
+      p.innerHTML = `<p class="vacio">Este video no se puede reproducir en el navegador`
+        + (v.cam==="cam1" ? " (la cámara del comedor graba en un formato viejo)" : "")
+        + `. Usá «Abrir en Drive» para descargarlo y verlo con VLC.</p>`;
+    };
+  } else {
+    p.innerHTML = `<iframe src="https://drive.google.com/file/d/${v.id}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
+  }
   $("tituloVideo").innerHTML = `${nombreCam(v.cam)} · ${hhmm(v.ini)} a ${hhmm(v.fin)}${v.mov?'<span class="etiqueta-mov">Movimiento</span>':""}`;
   const a=$("abrir"); a.hidden=!!v.demo; a.href=`https://drive.google.com/file/d/${v.id}/view`;
   $("ant").disabled = !mismaCam(i,-1); $("sig").disabled = !mismaCam(i,1);
@@ -335,6 +348,16 @@ function demo(){
   camaras.forEach((c,k)=>{ for(let m=0;m<1440;m+=10){ if(Math.random()<0.04) continue;
     videos.push({cam:c.id,id:"x",nombre:"",ini:m,fin:m+10,mov:Math.random()<(k===1?0.5:0.15),demo:true}); }});
   completarFin(); dibujar();
+}
+
+/* ---------- reproductor directo (service worker) ---------- */
+let swListo = false;
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then(() => {
+    if (navigator.serviceWorker.controller) swListo = true;
+    else if (!sessionStorage.getItem("swRecarga")) { sessionStorage.setItem("swRecarga","1"); location.reload(); }
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener("controllerchange", () => { swListo = true; });
 }
 
 /* ---------- arranque ---------- */
