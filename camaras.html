@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Centinela · Grabaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+/* =========================================================
+   CONFIGURACIÓN: completar CLIENT_ID (ver instrucciones)
+   ========================================================= */
+:root{
+  --fondo:#E9EEF2; --panel:#FFFFFF; --tinta:#1D2B3A; --suave:#5B6B7C;
+  --linea:#C9D3DC; --continuo:#7D97AE; --movimiento:#E39B2D; --activo:#1D2B3A;
+  --regla:#F4F7F9;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --fondo:#1A2430; --panel:#223040; --tinta:#E6ECF1; --suave:#9AAABA;
+    --linea:#36485A; --continuo:#5F7D97; --movimiento:#F0AE45; --activo:#FFFFFF;
+    --regla:#283849; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --fondo:#1A2430; --panel:#223040; --tinta:#E6ECF1; --suave:#9AAABA;
+  --linea:#36485A; --continuo:#5F7D97; --movimiento:#F0AE45; --activo:#FFFFFF;
+  --regla:#283849; color-scheme: dark;
+}
+*{box-sizing:border-box}
+html{height:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;min-height:100%;background:var(--fondo);color:var(--tinta);
+  font-family:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:16px;line-height:1.45;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--movimiento);outline-offset:2px}
+
+/* barra superior */
+.barra{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;
+  background:var(--panel);border-bottom:1px solid var(--linea);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--panel);z-index:10}
+.marca{font-weight:700;font-size:1.15rem;margin-right:auto;display:flex;align-items:center;gap:8px}
+.marca .ojo{width:12px;height:12px;border-radius:50%;background:var(--movimiento);box-shadow:0 0 0 4px color-mix(in srgb,var(--movimiento) 25%,transparent)}
+.fecha{display:flex;align-items:center;gap:4px}
+.fecha input{font:inherit;color:inherit;background:var(--fondo);border:1px solid var(--linea);border-radius:8px;padding:6px 8px}
+.btn{background:var(--fondo);border:1px solid var(--linea);border-radius:8px;padding:6px 12px;min-height:38px}
+.btn.primario{background:var(--tinta);color:var(--panel);border-color:var(--tinta)}
+.btn[disabled]{opacity:.45;cursor:default}
+
+main{max-width:1200px;margin:0 auto;padding:16px}
+
+/* reproductor */
+.reproductor{background:var(--panel);border:1px solid var(--linea);border-radius:14px;overflow:hidden}
+.pantalla{position:relative;aspect-ratio:16/9;background:#000;display:grid;place-items:center}
+.pantalla iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.pantalla .vacio{color:#C9D3DC;text-align:center;padding:24px;max-width:46ch}
+.info{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px}
+.info .titulo{font-weight:700;margin-right:auto}
+.info a{color:inherit}
+.etiqueta-mov{display:inline-block;padding:1px 8px;border-radius:99px;background:var(--movimiento);color:#1D2B3A;font-size:.85rem;font-weight:700;margin-left:6px}
+
+/* línea de tiempo */
+.linea-tiempo{margin-top:16px;background:var(--panel);border:1px solid var(--linea);border-radius:14px;padding:12px 0 8px}
+.lt-cabecera{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:0 14px 10px}
+.lt-cabecera h2{font-size:1rem;margin:0;margin-right:auto}
+.leyenda{display:flex;gap:14px;color:var(--suave);font-size:.9rem}
+.leyenda i{display:inline-block;width:14px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+.zoom{display:flex;gap:4px}
+.lt-cuerpo{display:grid;grid-template-columns:120px 1fr}
+.nombres div{height:44px;display:flex;align-items:center;padding:0 10px 0 14px;font-weight:700;font-size:.92rem;
+  border-top:1px solid var(--linea);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nombres .hueco{height:28px;border-top:0}
+.desliza{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.pista{position:relative}
+.regla{height:28px;position:relative;background:var(--regla)}
+.regla span:first-child{transform:none}
+.regla span{position:absolute;top:5px;font-size:.78rem;color:var(--suave);transform:translateX(-50%)}
+.regla span::after{content:"";position:absolute;left:50%;top:18px;height:6px;border-left:1px solid var(--linea)}
+.fila{height:44px;position:relative;border-top:1px solid var(--linea);
+  background-image:linear-gradient(to right,var(--linea) 1px,transparent 1px)}
+.fila{cursor:pointer}
+.bloque{position:absolute;top:8px;height:28px;border-radius:3px;background:var(--continuo);pointer-events:none}
+.bloque.mov{background:var(--movimiento)}
+.bloque.activo{outline:3px solid var(--activo);outline-offset:1px;z-index:2}
+.fila:hover{background-color:color-mix(in srgb,var(--movimiento) 8%,transparent)}
+.ahora{position:absolute;top:0;bottom:0;width:2px;background:#D9473B;z-index:3;pointer-events:none}
+.estado{padding:10px 14px;color:var(--suave)}
+.estado.error{color:#C0392B}
+
+@media (max-width:640px){
+  .lt-cuerpo{grid-template-columns:78px 1fr}
+  .nombres div{font-size:.82rem;padding-left:10px}
+  .marca{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="barra">
+  <div class="marca"><span class="ojo" aria-hidden="true"></span>Centinela</div>
+  <div class="fecha">
+    <button class="btn" id="diaAnt" aria-label="Día anterior">◀</button>
+    <input type="date" id="dia" aria-label="Día">
+    <button class="btn" id="diaSig" aria-label="Día siguiente">▶</button>
+  </div>
+  <button class="btn primario" id="entrar">Entrar con Google</button>
+</header>
+
+<main>
+  <section class="reproductor" aria-label="Reproductor">
+    <div class="pantalla" id="pantalla">
+      <p class="vacio" id="msgPantalla">Elegí un video en la línea de tiempo para verlo acá.</p>
+    </div>
+    <div class="info">
+      <span class="titulo" id="tituloVideo">Ningún video seleccionado</span>
+      <button class="btn" id="ant" disabled>Anterior</button>
+      <button class="btn" id="sig" disabled>Siguiente</button>
+      <a id="abrir" href="#" target="_blank" rel="noopener" hidden>Abrir en Drive</a>
+    </div>
+  </section>
+
+  <section class="linea-tiempo" aria-label="Línea de tiempo">
+    <div class="lt-cabecera">
+      <h2 id="tituloDia">Grabaciones</h2>
+      <div class="leyenda"><span><i style="background:var(--continuo)"></i>Grabación</span><span><i style="background:var(--movimiento)"></i>Con movimiento</span></div>
+      <div class="zoom" role="group" aria-label="Zoom">
+        <button class="btn" data-zoom="1">24 h</button>
+        <button class="btn" data-zoom="4">6 h</button>
+        <button class="btn" data-zoom="12">2 h</button>
+      </div>
+    </div>
+    <div class="lt-cuerpo">
+      <div class="nombres" id="nombres"></div>
+      <div class="desliza" id="desliza"><div class="pista" id="pista"></div></div>
+    </div>
+    <p class="estado" id="estado">Entrá con tu cuenta de Google para ver las grabaciones.</p>
+  </section>
+</main>
+
+<script>
+/* ============== CONFIGURACIÓN ============== */
+const CLIENT_ID = "26412128518-c5epf0nmfv05j8sfrvlqvucha10m4uq6.apps.googleusercontent.com";
+const CARPETA_RAIZ = "CIP de camaras IP";
+const NOMBRES = { cam1:"Comedor", cam2:"JJ", cam3:"Garaje", cam4:"Puerta", cam5:"Frente" };
+const DURACION_MIN = 10;   // duración de cada video (Centinela graba de a 10 min)
+/* =========================================== */
+
+const $ = id => document.getElementById(id);
+const API = "https://www.googleapis.com/drive/v3/files";
+let token = null, tokenClient = null, zoom = 1;
+let camaras = [];          // [{id:'cam1', folderId:'...'}]
+let videos = [];           // [{cam, id, nombre, ini(min), fin(min), mov}]
+let actual = -1;
+
+/* ---------- utilidades ---------- */
+const hoyISO = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); };
+const hhmm = m => String(Math.floor(m/60)).padStart(2,"0")+":"+String(Math.floor(m%60)).padStart(2,"0");
+const nombreCam = c => NOMBRES[c] || c;
+function estado(txt, error=false){ const e=$("estado"); e.textContent=txt; e.className="estado"+(error?" error":""); e.hidden=!txt; }
+
+async function drive(params){
+  const url = API+"?"+new URLSearchParams({supportsAllDrives:"true",includeItemsFromAllDrives:"true",pageSize:"1000",...params});
+  const r = await fetch(url,{headers:{Authorization:"Bearer "+token}});
+  if (r.status===401){ token=null; sessionStorage.removeItem("tk"); throw new Error("La sesión venció. Tocá «Entrar con Google» de nuevo."); }
+  if (!r.ok) throw new Error("Drive respondió con error "+r.status+".");
+  return r.json();
+}
+async function listarTodo(q, fields){
+  let out=[], pageToken;
+  do{
+    const j = await drive({q, fields:"nextPageToken,files("+fields+")", ...(pageToken?{pageToken}:{})});
+    out = out.concat(j.files||[]); pageToken = j.nextPageToken;
+  } while(pageToken);
+  return out;
+}
+
+/* ---------- login ---------- */
+function iniciarGoogle(){
+  if (!window.google?.accounts?.oauth2){ setTimeout(iniciarGoogle,300); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: "https://www.googleapis.com/auth/drive.readonly",
+    callback: r => {
+      if (r.error){ estado("No se pudo entrar: "+r.error, true); return; }
+      token = r.access_token;
+      sessionStorage.setItem("tk", JSON.stringify({t:token, vence:Date.now()+ (r.expires_in-60)*1000}));
+      $("entrar").textContent="Salir";
+      cargarCamaras();
+    }
+  });
+}
+$("entrar").onclick = () => {
+  if (token){ google.accounts.oauth2.revoke(token,()=>{}); token=null; sessionStorage.removeItem("tk");
+    $("entrar").textContent="Entrar con Google"; videos=[]; dibujar(); estado("Sesión cerrada."); return; }
+  if (CLIENT_ID.startsWith("PEGAR")){ estado("Falta configurar el CLIENT_ID en el archivo. Mientras tanto se muestra un ejemplo.", true); demo(); return; }
+  tokenClient?.requestAccessToken({prompt:""});
+};
+
+/* ---------- datos ---------- */
+async function cargarCamaras(){
+  try{
+    estado("Buscando la carpeta de las cámaras…");
+    const raiz = await listarTodo(`name='${CARPETA_RAIZ}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,"id,name");
+    if (!raiz.length) throw new Error(`No encontré la carpeta «${CARPETA_RAIZ}» en tu Drive.`);
+    const subs = await listarTodo(`'${raiz[0].id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,"id,name");
+    camaras = subs.filter(f=>/^cam\d+$/.test(f.name)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}))
+                  .map(f=>({id:f.name, folderId:f.id}));
+    if (!camaras.length) throw new Error("La carpeta existe, pero no tiene subcarpetas cam1, cam2…");
+    cargarDia();
+  }catch(e){ estado(e.message,true); }
+}
+
+async function cargarDia(){
+  const dia = $("dia").value; if (!token || !camaras.length) return;
+  const clave = dia.replaceAll("-","");
+  estado("Cargando las grabaciones del día…"); videos=[]; dibujar();
+  try{
+    const listas = await Promise.all(camaras.map(c =>
+      listarTodo(`name contains '${c.id}_${clave}' and trashed=false`,"id,name,parents")
+        .then(fs => fs.filter(f=>f.name.endsWith(".mp4")).map(f => aVideo(c, f)).filter(Boolean))));
+    videos = listas.flat();
+    completarFin();
+    dibujar();
+    estado(videos.length ? "" : "No hay grabaciones guardadas para este día. Probá con otro: Drive guarda solo los últimos días.");
+  }catch(e){ estado(e.message,true); }
+}
+
+function aVideo(c, f){
+  const m = f.name.match(/_(\d{8})_(\d{2})(\d{2})(\d{2})\.mp4$/); if (!m) return null;
+  const ini = (+m[2])*60 + (+m[3]) + (+m[4])/60;
+  return { cam:c.id, id:f.id, nombre:f.name, ini, fin:ini+DURACION_MIN, mov: !(f.parents||[]).includes(c.folderId) };
+}
+function completarFin(){
+  videos.sort((a,b)=> a.cam.localeCompare(b.cam,undefined,{numeric:true}) || a.ini-b.ini);
+  for (let i=0;i<videos.length-1;i++){
+    const a=videos[i], b=videos[i+1];
+    if (a.cam===b.cam && b.ini < a.fin) a.fin = b.ini;   // un corte de grabación: el video duró menos
+  }
+}
+
+/* ---------- dibujo ---------- */
+function dibujar(){
+  const ancho = $("desliza").clientWidth * zoom;
+  const pxMin = ancho / 1440;
+  const pista=$("pista"), nombres=$("nombres");
+  pista.style.width = ancho+"px"; pista.innerHTML=""; nombres.innerHTML="<div class='hueco'></div>";
+
+  const regla=document.createElement("div"); regla.className="regla";
+  const paso = [15,30,60,120,180,360].find(x=>x*pxMin>=64) || 360;
+  for (let m=0;m<=1440;m+=paso){ const s=document.createElement("span"); s.style.left=(m*pxMin)+"px"; s.textContent=hhmm(m%1440===0&&m?1439.99:m).replace("23:59","24:00"); regla.appendChild(s); }
+  pista.appendChild(regla);
+
+  const cams = camaras.length ? camaras.map(c=>c.id) : [...new Set(videos.map(v=>v.cam))];
+  cams.forEach(c=>{
+    const n=document.createElement("div"); n.textContent=nombreCam(c); n.title=c; nombres.appendChild(n);
+    const fila=document.createElement("div"); fila.className="fila";
+    fila.style.backgroundSize = (60*pxMin)+"px 100%";
+    fila.setAttribute("role","button"); fila.tabIndex=0;
+    fila.setAttribute("aria-label", "Videos de "+nombreCam(c)+". Tocá una hora para reproducir.");
+    videos.forEach((v,i)=>{ if (v.cam!==c) return;
+      const b=document.createElement("div");
+      b.className="bloque"+(v.mov?" mov":"")+(i===actual?" activo":"");
+      b.style.left=(v.ini*pxMin)+"px"; b.style.width=Math.max(2,(v.fin-v.ini)*pxMin-1)+"px";
+      fila.appendChild(b);
+    });
+    // tocar en cualquier punto de la fila: el video de esa hora (o el más cercano)
+    fila.onclick = e => {
+      const m = (e.clientX - fila.getBoundingClientRect().left) / pxMin;
+      let mejor=-1, dist=1e9;
+      videos.forEach((v,i)=>{ if (v.cam!==c) return;
+        const d = (m>=v.ini && m<v.fin) ? 0 : Math.min(Math.abs(m-v.ini),Math.abs(m-v.fin));
+        if (d<dist){ dist=d; mejor=i; } });
+      if (mejor>=0 && dist<=30) reproducir(mejor);
+    };
+    fila.onkeydown = e => { if (e.key==="Enter"){ const i=videos.findIndex(v=>v.cam===c); if(i>=0) reproducir(i);} };
+    pista.appendChild(fila);
+  });
+
+  if ($("dia").value===hoyISO()){
+    const d=new Date(), m=d.getHours()*60+d.getMinutes();
+    const a=document.createElement("div"); a.className="ahora"; a.style.left=(m*pxMin)+"px"; pista.appendChild(a);
+  }
+  if (!dibujar.ya){ dibujar.ya=true; const d=new Date(); $("desliza").scrollLeft=Math.max(0,(d.getHours()*60-90)*pxMin); }
+  $("tituloDia").textContent = "Grabaciones del " + new Date($("dia").value+"T12:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+}
+
+function reproducir(i){
+  const v=videos[i]; if (!v) return; actual=i;
+  const p=$("pantalla");
+  p.innerHTML = v.demo ? `<p class="vacio">Ejemplo: acá se vería el video de ${nombreCam(v.cam)} de las ${hhmm(v.ini)}.</p>`
+                       : `<iframe src="https://drive.google.com/file/d/${v.id}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
+  $("tituloVideo").innerHTML = `${nombreCam(v.cam)} · ${hhmm(v.ini)} a ${hhmm(v.fin)}${v.mov?'<span class="etiqueta-mov">Movimiento</span>':""}`;
+  const a=$("abrir"); a.hidden=!!v.demo; a.href=`https://drive.google.com/file/d/${v.id}/view`;
+  $("ant").disabled = !mismaCam(i,-1); $("sig").disabled = !mismaCam(i,1);
+  dibujar();
+}
+const mismaCam = (i,d) => videos[i+d] && videos[i+d].cam===videos[i].cam;
+$("ant").onclick=()=> mismaCam(actual,-1) && reproducir(actual-1);
+$("sig").onclick=()=> mismaCam(actual,1) && reproducir(actual+1);
+document.addEventListener("keydown",e=>{ if(e.target.tagName==="INPUT")return; if(e.key==="ArrowLeft")$("ant").click(); if(e.key==="ArrowRight")$("sig").click(); });
+
+/* ---------- fecha y zoom ---------- */
+function moverDia(d){ const f=new Date($("dia").value+"T12:00"); f.setDate(f.getDate()+d); $("dia").value=f.toISOString().slice(0,10); actual=-1; token?cargarDia():dibujar(); }
+$("diaAnt").onclick=()=>moverDia(-1); $("diaSig").onclick=()=>moverDia(1);
+$("dia").onchange=()=>{ actual=-1; token?cargarDia():dibujar(); };
+document.querySelectorAll("[data-zoom]").forEach(b=>b.onclick=()=>{
+  const sc=$("desliza"), centro=(sc.scrollLeft+sc.clientWidth/2)/sc.scrollWidth;
+  zoom=+b.dataset.zoom; dibujar(); sc.scrollLeft=centro*sc.scrollWidth-sc.clientWidth/2; });
+window.addEventListener("resize",()=>dibujar());
+
+/* ---------- ejemplo sin conexión ---------- */
+function demo(){
+  camaras=["cam1","cam2","cam3","cam4","cam5"].map(id=>({id,folderId:id})); videos=[];
+  camaras.forEach((c,k)=>{ for(let m=0;m<1440;m+=10){ if(Math.random()<0.04) continue;
+    videos.push({cam:c.id,id:"x",nombre:"",ini:m,fin:m+10,mov:Math.random()<(k===1?0.5:0.15),demo:true}); }});
+  completarFin(); dibujar();
+}
+
+/* ---------- arranque ---------- */
+$("dia").value=hoyISO();
+if (window.innerWidth<640) zoom=4;
+try{ const s=JSON.parse(sessionStorage.getItem("tk")||"null"); if(s && s.vence>Date.now()){ token=s.t; $("entrar").textContent="Salir"; } }catch{}
+if (CLIENT_ID.startsWith("PEGAR")) { estado("Vista de ejemplo: falta configurar el CLIENT_ID para conectar con Drive."); demo(); }
+else { iniciarGoogle(); if (token) cargarCamaras(); else dibujar(); }
+</script>
+</body>
+</html>
