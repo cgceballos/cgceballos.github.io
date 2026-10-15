@@ -221,8 +221,9 @@ async function cargarDia(){
   try{
     const listas = await Promise.all(camaras.map(c =>
       listarTodo(`name contains '${c.id}_${clave}' and trashed=false`,"id,name,parents")
-        .then(fs => fs.filter(f=>f.name.endsWith(".mp4")).map(f => aVideo(c, f)).filter(Boolean))));
-    videos = listas.flat();
+        .then(fs => fs.filter(f => f.name.startsWith(`${c.id}_${clave}_`) && f.name.endsWith(".mp4"))
+                   .map(f => aVideo(c, f)).filter(Boolean))));
+    const vistos=new Set(); videos = listas.flat().filter(v=>!vistos.has(v.id) && vistos.add(v.id));
     completarFin();
     dibujar();
     estado(videos.length ? "" : "No hay grabaciones guardadas para este día. Probá con otro: Drive guarda solo los últimos días.");
