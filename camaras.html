@@ -315,10 +315,17 @@ function reproducir(i){
     const vid = p.querySelector("video");
     vid.src = `video/${v.id}?t=${encodeURIComponent(token)}`;
     vid.onended = () => mismaCam(actual, 1) && reproducir(actual + 1);   // sigue con el próximo tramo
-    vid.onerror = () => {
-      p.innerHTML = `<p class="vacio">Este video no se puede reproducir en el navegador`
-        + (v.cam==="cam1" ? " (la cámara del comedor graba en un formato viejo)" : "")
-        + `. Usá «Abrir en Drive» para descargarlo y verlo con VLC.</p>`;
+    vid.onerror = async () => {
+      // ¿Es un problema de acceso o de formato? Se prueba pedir los primeros bytes.
+      let cod = "";
+      try { cod = (await fetch(vid.src, { headers: { Range: "bytes=0-1" } })).status; } catch { cod = "sin red"; }
+      const formato = (cod === 206 || cod === 200);
+      p.innerHTML = `<p class="vacio">` + (formato
+        ? `Este video no se puede reproducir en el navegador`
+          + (v.cam==="cam1" ? " (la cámara del comedor graba en un formato viejo)" : "")
+          + `. Usá «Abrir en Drive» para descargarlo y verlo con VLC.`
+        : `No se pudo leer el video desde Drive (código ${cod}). Tocá «Salir» y volvé a «Entrar con Google».`)
+        + `</p>`;
     };
   } else {
     p.innerHTML = `<iframe src="https://drive.google.com/file/d/${v.id}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
