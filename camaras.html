@@ -315,6 +315,13 @@ function reproducir(i){
     const vid = p.querySelector("video");
     vid.src = `video/${v.id}?t=${encodeURIComponent(token)}`;
     vid.onended = () => mismaCam(actual, 1) && reproducir(actual + 1);   // sigue con el próximo tramo
+    // Video en un formato que el navegador no decodifica (ej. MPEG-4 viejo de la cam1):
+    // suena el audio pero la imagen queda negra -> se usa el reproductor de Drive.
+    vid.onloadedmetadata = () => {
+      if (!vid.videoWidth) {
+        p.innerHTML = `<iframe src="https://drive.google.com/file/d/${v.id}/preview" allow="autoplay; fullscreen" allowfullscreen title="Video"></iframe>`;
+      }
+    };
     vid.onerror = async () => {
       // ¿Es un problema de acceso o de formato? Se prueba pedir los primeros bytes.
       let cod = "";
